@@ -73,7 +73,7 @@
         
         .toolbar {
             padding: 8px 15px; border-bottom: 1px solid var(--border);
-            display: flex; align-items: center; gap: 8px; background: var(--bg-sidebar);
+            display: flex; align-items: center; gap: 8px; background: var(--bg-sidebar); flex-wrap: wrap;
         }
 
         #editor {
@@ -118,6 +118,8 @@
 
         #editor h2 { color: var(--accent); border-bottom: 1px solid var(--border); margin-top: 0; }
         #editor:empty:before { content: attr(placeholder); color: gray; }
+
+        .color-dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; border: 1px solid rgba(0,0,0,0.1); margin-right: 2px; }
     </style>
 </head>
 <body>
@@ -141,11 +143,19 @@
 <main class="main-content">
     <div class="toolbar">
         <button class="toggle-sidebar" onclick="toggleSidebar()">☰</button>
-        <div class="format-tools" style="display: flex; gap: 4px;">
+        <div class="format-tools" style="display: flex; gap: 4px; flex-wrap: wrap;">
             <button id="btn-H2" class="format-btn" onclick="execCmd('formatBlock', 'H2')">Título</button>
             <button id="btn-bold" class="format-btn" onclick="execCmd('bold')"><b>B</b></button>
-            <button id="btn-blue" class="format-btn" onclick="execCmd('foreColor', '#1a73e8')">Azul</button>
-            <button id="btn-red" class="format-btn" onclick="execCmd('foreColor', '#d93025')">Vermelho</button>
+            
+            <button class="format-btn" onclick="execCmd('foreColor', '#1a73e8')" title="Azul"><span class="color-dot" style="background:#1a73e8"></span></button>
+            <button class="format-btn" onclick="execCmd('foreColor', '#4285f4')" title="Azul Claro"><span class="color-dot" style="background:#4285f4"></span></button>
+            <button class="format-btn" onclick="execCmd('foreColor', '#d93025')" title="Vermelho"><span class="color-dot" style="background:#d93025"></span></button>
+            <button class="format-btn" onclick="execCmd('foreColor', '#f9ab00')" title="Amarelo"><span class="color-dot" style="background:#f9ab00"></span></button>
+            <button class="format-btn" onclick="execCmd('foreColor', '#e67c73')" title="Laranja"><span class="color-dot" style="background:#e67c73"></span></button>
+
+            <button class="format-btn" onclick="execCmd('hiliteColor', '#fff475')" title="Realce Amarelo">🖍️</button>
+            <button class="format-btn" onclick="execCmd('hiliteColor', '#aecbfa')" title="Realce Azul">🖍️</button>
+
             <button id="btn-list" class="format-btn" onclick="execCmd('insertUnorderedList')">• Lista</button>
             <button class="format-btn" onclick="execCmd('removeFormat')">Limpar</button>
         </div>
@@ -159,7 +169,8 @@
         <button class="floating-btn" id="floatBtn" onclick="toggleFloatingTree()">Notas ▾</button>
     </div>
 
-    <div id="editor" contenteditable="true" oninput="saveCurrentNote()" placeholder="Escreve as tuas notas aqui..."></main>
+    <div id="editor" contenteditable="true" oninput="saveCurrentNote()" placeholder="Escreve as tuas notas aqui..."></div>
+</main>
 
 <script>
     let data = JSON.parse(localStorage.getItem('telecom_v7')) || {
@@ -168,36 +179,23 @@
     };
     let activeFolderIndex = 0;
 
+    // NOVO: Lógica de Colar Texto Limpo
+    const editorEl = document.getElementById('editor');
+    editorEl.addEventListener('paste', function(e) {
+        e.preventDefault();
+        const text = (e.originalEvent || e).clipboardData.getData('text/plain');
+        document.execCommand('insertText', false, text);
+    });
+
     function updateToolbars() {
         document.getElementById('btn-bold').classList.toggle('active-tool', document.queryCommandState('bold'));
         document.getElementById('btn-list').classList.toggle('active-tool', document.queryCommandState('insertUnorderedList'));
         const block = document.queryCommandValue('formatBlock');
         document.getElementById('btn-H2').classList.toggle('active-tool', block === 'h2');
-        const color = document.queryCommandValue('foreColor');
-        const isBlue = (color === 'rgb(26, 115, 232)');
-        const isRed = (color === 'rgb(217, 48, 37)');
-        document.getElementById('btn-blue').classList.toggle('active-tool', isBlue);
-        document.getElementById('btn-red').classList.toggle('active-tool', isRed);
     }
 
-    document.querySelector('button[onclick*="removeFormat"]').onclick = function() {
-        document.execCommand('removeFormat', false, null);
-        document.execCommand('foreColor', false, data.dark ? '#e0e0e0' : '#202124');
-        updateToolbars();
-    };
-
     function execCmd(cmd, val = null) {
-        if (cmd === 'foreColor') {
-            const currentColor = document.queryCommandValue('foreColor');
-            const targetRGB = (val === '#1a73e8') ? 'rgb(26, 115, 232)' : 'rgb(217, 48, 37)';
-            if (currentColor === targetRGB) {
-                document.execCommand('foreColor', false, data.dark ? '#e0e0e0' : '#202124');
-            } else {
-                document.execCommand(cmd, false, val);
-            }
-        } else {
-            document.execCommand(cmd, false, val);
-        }
+        document.execCommand(cmd, false, val);
         document.getElementById('editor').focus();
         updateToolbars();
     }
@@ -227,6 +225,7 @@
         const containers = [document.getElementById('tree'), document.getElementById('floatingTree')];
         
         containers.forEach(container => {
+            if(!container) return;
             container.innerHTML = '';
             data.folders.forEach((folder, fIdx) => {
                 const group = document.createElement('div');
@@ -302,7 +301,7 @@
     function loadNote(id) {
         data.activeNoteId = id;
         const note = data.folders.flatMap(f => f.notes).find(n => n.id === id);
-        document.getElementById('editor').innerHTML = note ? note.content : '';
+        editorEl.innerHTML = note ? note.content : '';
         render();
         updateToolbars();
     }
@@ -310,8 +309,8 @@
     function saveCurrentNote() {
         const note = data.folders.flatMap(f => f.notes).find(n => n.id === data.activeNoteId);
         if (note) {
-            note.content = document.getElementById('editor').innerHTML;
-            const text = document.getElementById('editor').innerText.trim().split('\n')[0].substring(0, 25);
+            note.content = editorEl.innerHTML;
+            const text = editorEl.innerText.trim().split('\n')[0].substring(0, 25);
             if(text.length > 1) note.title = text;
             save();
             const activeEls = document.querySelectorAll('.note-item.active span');
@@ -363,7 +362,6 @@
         reader.readAsText(input.files[0]);
     }
 
-    const editorEl = document.getElementById('editor');
     editorEl.addEventListener('keyup', updateToolbars);
     editorEl.addEventListener('mouseup', updateToolbars);
     editorEl.addEventListener('click', updateToolbars);
