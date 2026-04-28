@@ -179,13 +179,31 @@
     };
     let activeFolderIndex = 0;
 
-    // NOVO: Lógica de Colar Texto Limpo
+    // 1. FORÇAR TEXTO PURO NA ENTRADA (PASTE)
     const editorEl = document.getElementById('editor');
     editorEl.addEventListener('paste', function(e) {
         e.preventDefault();
+        // Obtém o texto sem qualquer formatação oculta
         const text = (e.originalEvent || e).clipboardData.getData('text/plain');
-        document.execCommand('insertText', false, text);
+        
+        // Insere usando a API de seleção para garantir que o Excel não veja HTML depois
+        const selection = window.getSelection();
+        if (!selection.rangeCount) return;
+        selection.deleteFromDocument();
+        selection.getRangeAt(0).insertNode(document.createTextNode(text));
+        
+        // Move o cursor para o fim do texto colado
+        selection.collapseToEnd();
+        saveCurrentNote();
     });
+
+    // 2. CORREÇÃO NA FUNÇÃO DE COMANDOS
+    function execCmd(cmd, val = null) {
+        document.execCommand(cmd, false, val);
+        editorEl.focus();
+        updateToolbars();
+        saveCurrentNote();
+    }
 
     function updateToolbars() {
         document.getElementById('btn-bold').classList.toggle('active-tool', document.queryCommandState('bold'));
