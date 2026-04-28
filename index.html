@@ -179,37 +179,9 @@
     };
     let activeFolderIndex = 0;
 
-    // SOLUÇÃO FINAL: Texto Limpo com Quebras de Linha (Perfeito para Excel)
     const editorEl = document.getElementById('editor');
-    editorEl.addEventListener('paste', function(e) {
-        e.preventDefault();
-        
-        // 1. Obtém o texto simples (preserva quebras de linha nativas)
-        let text = (e.originalEvent || e).clipboardData.getData('text/plain');
-        
-        // 2. Converte as quebras de linha em <br> para o editor entender
-        // mas sem adicionar formatação de cores ou fontes
-        const cleanHTML = text.replace(/\n/g, '<br>');
-        
-        // 3. Insere como HTML simples (o Excel lerá apenas o texto e as quebras)
-        document.execCommand('insertHTML', false, cleanHTML);
-        
-        saveCurrentNote();
-    });
 
-    // FORÇAR SAÍDA COMO TEXTO PURO (DA APP PARA O EXCEL)
-    editorEl.addEventListener('copy', function(e) {
-        // Obtém o texto selecionado
-        const selection = window.getSelection().toString();
-        
-        // Define explicitamente que o que vai para o clipboard é TEXTO PLANO
-        e.clipboardData.setData('text/plain', selection);
-        
-        // Impede que o browser envie a versão HTML (que é o que estraga o Excel)
-        e.preventDefault();
-    });
-
-    // Mantém também o código de PASTE que limpa a entrada
+    // CORREÇÃO: Limpa a entrada (PASTE) para evitar lixo HTML
     editorEl.addEventListener('paste', function(e) {
         e.preventDefault();
         const text = (e.originalEvent || e).clipboardData.getData('text/plain');
@@ -218,25 +190,26 @@
         saveCurrentNote();
     });
 
-    // 2. CORREÇÃO NA FUNÇÃO DE COMANDOS
-    function execCmd(cmd, val = null) {
-        document.execCommand(cmd, false, val);
-        editorEl.focus();
-        updateToolbars();
-        saveCurrentNote();
-    }
+    // CORREÇÃO: Limpa a saída (COPY) para que o Excel receba apenas Texto Puro
+    editorEl.addEventListener('copy', function(e) {
+        const selection = window.getSelection().toString();
+        e.clipboardData.setData('text/plain', selection);
+        e.preventDefault(); 
+    });
 
     function updateToolbars() {
         document.getElementById('btn-bold').classList.toggle('active-tool', document.queryCommandState('bold'));
         document.getElementById('btn-list').classList.toggle('active-tool', document.queryCommandState('insertUnorderedList'));
         const block = document.queryCommandValue('formatBlock');
-        document.getElementById('btn-H2').classList.toggle('active-tool', block === 'h2');
+        const h2Btn = document.getElementById('btn-H2');
+        if(h2Btn) h2Btn.classList.toggle('active-tool', block === 'h2');
     }
 
     function execCmd(cmd, val = null) {
         document.execCommand(cmd, false, val);
-        document.getElementById('editor').focus();
+        editorEl.focus();
         updateToolbars();
+        saveCurrentNote();
     }
     
     function toggleSidebar() { 
