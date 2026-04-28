@@ -179,21 +179,21 @@
     };
     let activeFolderIndex = 0;
 
-    // 1. FORÇAR TEXTO PURO NA ENTRADA (PASTE)
+    // SOLUÇÃO FINAL: Texto Limpo com Quebras de Linha (Perfeito para Excel)
     const editorEl = document.getElementById('editor');
     editorEl.addEventListener('paste', function(e) {
         e.preventDefault();
-        // Obtém o texto sem qualquer formatação oculta
-        const text = (e.originalEvent || e).clipboardData.getData('text/plain');
         
-        // Insere usando a API de seleção para garantir que o Excel não veja HTML depois
-        const selection = window.getSelection();
-        if (!selection.rangeCount) return;
-        selection.deleteFromDocument();
-        selection.getRangeAt(0).insertNode(document.createTextNode(text));
+        // 1. Obtém o texto simples (preserva quebras de linha nativas)
+        let text = (e.originalEvent || e).clipboardData.getData('text/plain');
         
-        // Move o cursor para o fim do texto colado
-        selection.collapseToEnd();
+        // 2. Converte as quebras de linha em <br> para o editor entender
+        // mas sem adicionar formatação de cores ou fontes
+        const cleanHTML = text.replace(/\n/g, '<br>');
+        
+        // 3. Insere como HTML simples (o Excel lerá apenas o texto e as quebras)
+        document.execCommand('insertHTML', false, cleanHTML);
+        
         saveCurrentNote();
     });
 
