@@ -197,6 +197,27 @@
         saveCurrentNote();
     });
 
+    // FORÇAR SAÍDA COMO TEXTO PURO (DA APP PARA O EXCEL)
+    editorEl.addEventListener('copy', function(e) {
+        // Obtém o texto selecionado
+        const selection = window.getSelection().toString();
+        
+        // Define explicitamente que o que vai para o clipboard é TEXTO PLANO
+        e.clipboardData.setData('text/plain', selection);
+        
+        // Impede que o browser envie a versão HTML (que é o que estraga o Excel)
+        e.preventDefault();
+    });
+
+    // Mantém também o código de PASTE que limpa a entrada
+    editorEl.addEventListener('paste', function(e) {
+        e.preventDefault();
+        const text = (e.originalEvent || e).clipboardData.getData('text/plain');
+        const cleanHTML = text.replace(/\n/g, '<br>');
+        document.execCommand('insertHTML', false, cleanHTML);
+        saveCurrentNote();
+    });
+
     // 2. CORREÇÃO NA FUNÇÃO DE COMANDOS
     function execCmd(cmd, val = null) {
         document.execCommand(cmd, false, val);
